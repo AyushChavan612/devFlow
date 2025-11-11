@@ -16,7 +16,7 @@ import Tabs from '@/components/Tabs';
 
 // --- 1. THIS IS THE NEW LINE ---
 // This will use the variable from Docker, or default to localhost for local testing
-const BACKEND_URL = 'http://13.60.218.112:5000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5000';
 
 interface File {
   name: string;
