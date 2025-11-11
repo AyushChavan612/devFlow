@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # The Backend Service
+  backend:
+    build: ./backend
+    container_name: devflow-backend-prod
+    restart: unless-stopped
+    networks:
+      - devflow-net
+    ports:
+      - "5000:5000"
+    # This will load the .env file we create on the server
+    env_file:
+      - ./backend/.env
+
+  # The Frontend Service
+  frontend:
+    build: ./frontend
+    container_name: devflow-frontend-prod
+    restart: unless-stopped
+    networks:
+      - devflow-net
+    ports:
+      # This is the port we will access from the browser
+      - "3000:3000"
+    environment:
+      # Tells the frontend how to find the backend
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:5000
+
+networks:
+  devflow-net:
+    driver: bridge

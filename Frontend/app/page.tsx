@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, FormEvent } from 'react';
-// 1. Import the new panel components
 import {
   Panel,
   PanelGroup,
@@ -15,6 +14,10 @@ import EditorLoader from '@/components/EditorLoader';
 import Header from '@/components/Header';
 import Tabs from '@/components/Tabs';
 
+// --- 1. THIS IS THE NEW LINE ---
+// This will use the variable from Docker, or default to localhost for local testing
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:5000';
+
 interface File {
   name: string;
   content: string;
@@ -23,7 +26,7 @@ interface File {
 const SUPPORTED_EXTENSIONS = ['js', 'py', 'c', 'cpp', 'java'];
 
 export default function Home() {
-  // All your state
+  // All your state...
   const [files, setFiles] = useState<File[]>([
     { name: 'index.js', content: 'console.log("Hello, DevFlow!");' },
     { name: 'styles.css', content: '/* Add your styles here */' },
@@ -37,7 +40,7 @@ export default function Home() {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [isTerminalVisible, setIsTerminalVisible] = useState(true);
 
-  // All your handler functions
+  // All your handlers...
   const activeFile = files.find(file => file.name === activeFileName);
 
   const handleSelectFile = (fileName: string) => {
@@ -89,11 +92,13 @@ export default function Home() {
     setFiles(remainingFiles);
   };
 
+  // --- 2. THIS FUNCTION IS NOW UPDATED ---
   const handleRunCode = async () => {
     if (!activeFile) return;
     setTerminalOutput(prev => [...prev, `$ running ${activeFile.name}...`]);
     try {
-      const response = await fetch('http://127.0.0.1:5000/run', {
+      // It now uses the BACKEND_URL variable
+      const response = await fetch(`${BACKEND_URL}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,6 +106,7 @@ export default function Home() {
           filename: activeFile.name
         }),
       });
+
       if (!response.ok) {
         const errorText = await response.text();
         setTerminalOutput(prev => [...prev, `Error: ${errorText}`, '--------------------']);
@@ -123,16 +129,15 @@ export default function Home() {
   
   const language = activeFile?.name.split('.').pop() || 'plaintext';
 
-  // --- THIS IS THE NEW LAYOUT ---
+  // Your layout JSX is unchanged...
   return (
     <main className="flex h-screen w-screen bg-gray-900 text-white">
       <PanelGroup direction="horizontal" className="flex-1">
-        {/* Sidebar Panel */}
         {isSidebarVisible && (
           <>
             <Panel defaultSize={20} minSize={15}>
               <FileExplorer
-                files={files} // <-- THE FIX IS HERE
+                files={files}
                 activeFile={activeFileName}
                 onSelectFile={handleSelectFile}
                 onFileDelete={handleDeleteFile}
@@ -147,11 +152,8 @@ export default function Home() {
             <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-sky-600" />
           </>
         )}
-
-        {/* Main Content Panel */}
         <Panel>
           <PanelGroup direction="vertical">
-            {/* Editor Panel */}
             <Panel minSize={30}>
               <div className="flex flex-col h-full">
                 <Header 
@@ -173,8 +175,6 @@ export default function Home() {
                 />
               </div>
             </Panel>
-
-            {/* Terminal Panel */}
             {isTerminalVisible && (
               <>
                 <PanelResizeHandle className="h-1 bg-gray-700 hover:bg-sky-600" />
