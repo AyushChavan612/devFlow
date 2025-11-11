@@ -1,32 +1,23 @@
 # --- Stage 1: The Builder ---
-# This stage builds your production app
 FROM node:22-bookworm-slim AS builder
-
 WORKDIR /app
-
-# Copy package files and install dependencies
 COPY package*.json ./
 RUN npm install
-
-# Copy the rest of the frontend code
 COPY . .
 
-# Build the production app
+# --- THIS IS THE FIX (Part 1) ---
+# This line tells Docker to expect a build-time variable
+ARG NEXT_PUBLIC_BACKEND_URL
+# This line makes it available to the 'npm run build' command
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+
 RUN npm run build
 
 # --- Stage 2: The Runner ---
-# This stage creates the final, small image
 FROM node:22-bookworm-slim AS runner
-
 WORKDIR /app
-
-# Copy only the necessary files from the 'builder' stage
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-
-# Expose port 3000
 EXPOSE 3000
-
-# The command to run the production server
 CMD ["node", "server.js"]
