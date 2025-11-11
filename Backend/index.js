@@ -5,12 +5,25 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const { v4: uuidv4 } = require('uuid');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const port = 5000;
 
 app.use(cors());
 app.use(express.json());
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, 
+  message: "Too many requests from this IP, please try again after 15 minutes",
+  standardHeaders: true,
+  legacyHeaders: false,
+  // --- THIS IS THE FIX ---
+  // This tells the limiter to ignore all pre-flight (OPTIONS) requests
+  skip: (req) => req.method === 'OPTIONS',
+});
+app.use(limiter);
 
 app.post('/run', (req, res) => {
   const { code, filename } = req.body;
@@ -20,7 +33,6 @@ app.post('/run', (req, res) => {
     return res.status(400).json({ error: 'Code or filename not provided.' });
   }
 
-  // Use a master try...catch block to prevent the server from ever crashing
   try {
     const extension = path.extname(filename).substring(1);
     const uniqueId = uuidv4();
@@ -35,13 +47,11 @@ app.post('/run', (req, res) => {
         command = `node "${filePath}"`;
         cleanupPaths.push(filePath);
         break;
-        
       case 'py':
         filePath = path.join(tempDir, `${uniqueId}.py`);
         command = `python3 "${filePath}"`;
         cleanupPaths.push(filePath);
         break;
-
       case 'c':
       case 'cpp':
         const compiler = extension === 'c' ? 'gcc' : 'g++';
@@ -51,7 +61,6 @@ app.post('/run', (req, res) => {
         command = `"${compiler}" "${sourcePath}" -o "${outputPath}" && "${outputPath}"`;
         cleanupPaths.push(sourcePath, outputPath);
         break;
-        
       case 'java':
         const javaDir = path.join(tempDir, uniqueId);
         fs.mkdirSync(javaDir);
@@ -59,7 +68,6 @@ app.post('/run', (req, res) => {
         command = `javac "${filePath}" && java -cp "${javaDir}" Main`;
         cleanupPaths.push(javaDir);
         break;
-
       default:
         return res.status(400).json({ output: `Error: Language '${extension}' is not supported.` });
     }
@@ -69,7 +77,6 @@ app.post('/run', (req, res) => {
     console.log(`Executing command: ${command}`);
 
     exec(command, (error, stdout, stderr) => {
-      // Cleanup logic
       cleanupPaths.forEach(p => fs.rmSync(p, { recursive: true, force: true }));
 
       if (error) {

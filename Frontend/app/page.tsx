@@ -2,8 +2,13 @@
 "use client";
 
 import { useState, FormEvent } from 'react';
-import { Allotment } from "allotment";
-import "allotment/dist/style.css";
+// 1. Import the new panel components
+import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+} from "react-resizable-panels";
+
 import FileExplorer from '@/components/FileExplorer';
 import Terminal from '@/components/Terminal';
 import EditorLoader from '@/components/EditorLoader';
@@ -18,6 +23,7 @@ interface File {
 const SUPPORTED_EXTENSIONS = ['js', 'py', 'c', 'cpp', 'java'];
 
 export default function Home() {
+  // All your state
   const [files, setFiles] = useState<File[]>([
     { name: 'index.js', content: 'console.log("Hello, DevFlow!");' },
     { name: 'styles.css', content: '/* Add your styles here */' },
@@ -31,6 +37,7 @@ export default function Home() {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [isTerminalVisible, setIsTerminalVisible] = useState(true);
 
+  // All your handler functions
   const activeFile = files.find(file => file.name === activeFileName);
 
   const handleSelectFile = (fileName: string) => {
@@ -94,9 +101,13 @@ export default function Home() {
           filename: activeFile.name
         }),
       });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const result = await response.json();
-      setTerminalOutput(prev => [...prev, result.output, '--------------------']);
+      if (!response.ok) {
+        const errorText = await response.text();
+        setTerminalOutput(prev => [...prev, `Error: ${errorText}`, '--------------------']);
+      } else {
+        const result = await response.json();
+        setTerminalOutput(prev => [...prev, result.output, '--------------------']);
+      }
     } catch (error) {
       console.error("Failed to run code:", error);
       setTerminalOutput(prev => [...prev, `Error: Failed to connect to backend. Is it running?`, '--------------------']);
@@ -109,35 +120,42 @@ export default function Home() {
 
   const toggleSidebar = () => setIsSidebarVisible(prev => !prev);
   const toggleTerminal = () => setIsTerminalVisible(prev => !prev);
+  
   const language = activeFile?.name.split('.').pop() || 'plaintext';
 
-
+  // --- THIS IS THE NEW LAYOUT ---
   return (
-    <main className="h-screen w-screen bg-gray-900 text-white">
-      <Allotment>
+    <main className="flex h-screen w-screen bg-gray-900 text-white">
+      <PanelGroup direction="horizontal" className="flex-1">
+        {/* Sidebar Panel */}
         {isSidebarVisible && (
-          <Allotment.Pane preferredSize={"250px"} minSize={150}>
-            <FileExplorer
-              files={files}
-              activeFile={activeFileName}
-              onSelectFile={handleSelectFile}
-              onFileDelete={handleDeleteFile}
-              onFileCreate={() => setIsAddingFile(true)}
-              isAddingFile={isAddingFile}
-              newFileName={newFileName}
-              setNewFileName={setNewFileName}
-              handleCreateFormSubmit={handleCreateFile}
-              onInputBlur={() => setIsAddingFile(false)}
-            />
-          </Allotment.Pane>
+          <>
+            <Panel defaultSize={20} minSize={15}>
+              <FileExplorer
+                files={files} // <-- THE FIX IS HERE
+                activeFile={activeFileName}
+                onSelectFile={handleSelectFile}
+                onFileDelete={handleDeleteFile}
+                onFileCreate={() => setIsAddingFile(true)}
+                isAddingFile={isAddingFile}
+                newFileName={newFileName}
+                setNewFileName={setNewFileName}
+                handleCreateFormSubmit={handleCreateFile}
+                onInputBlur={() => setIsAddingFile(false)}
+              />
+            </Panel>
+            <PanelResizeHandle className="w-1 bg-gray-700 hover:bg-sky-600" />
+          </>
         )}
 
-        <Allotment.Pane>
-          <Allotment vertical>
-            <Allotment.Pane>
-              <div className="h-full flex flex-col">
-                <Header
-                  onRunClick={handleRunCode}
+        {/* Main Content Panel */}
+        <Panel>
+          <PanelGroup direction="vertical">
+            {/* Editor Panel */}
+            <Panel minSize={30}>
+              <div className="flex flex-col h-full">
+                <Header 
+                  onRunClick={handleRunCode} 
                   onSuggestClick={handleSuggestCode}
                   onToggleSidebar={toggleSidebar}
                   onToggleTerminal={toggleTerminal}
@@ -151,19 +169,23 @@ export default function Home() {
                 <EditorLoader
                   fileContent={activeFile?.content || ''}
                   onContentChange={handleEditorChange}
-                   language={language}
+                  language={language} 
                 />
               </div>
-            </Allotment.Pane>
+            </Panel>
 
+            {/* Terminal Panel */}
             {isTerminalVisible && (
-              <Allotment.Pane preferredSize={"200px"} minSize={50}>
-                <Terminal output={terminalOutput} />
-              </Allotment.Pane>
+              <>
+                <PanelResizeHandle className="h-1 bg-gray-700 hover:bg-sky-600" />
+                <Panel defaultSize={25} minSize={10}>
+                  <Terminal output={terminalOutput} />
+                </Panel>
+              </>
             )}
-          </Allotment>
-        </Allotment.Pane>
-      </Allotment>
+          </PanelGroup>
+        </Panel>
+      </PanelGroup>
     </main>
   );
 }

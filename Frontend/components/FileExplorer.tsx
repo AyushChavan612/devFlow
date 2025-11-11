@@ -8,9 +8,10 @@ interface File {
   content: string;
 }
 
-// ... (The interface remains the same)
+// ---- THIS IS THE FIX ----
+// We must add the 'files' prop to this interface
 interface FileExplorerProps {
-  files: File[];
+  files: File[]; // <-- THIS IS THE MISSING LINE
   activeFile: string;
   onSelectFile: (fileName: string) => void;
   onFileDelete: (fileName: string) => void;
@@ -22,9 +23,8 @@ interface FileExplorerProps {
   onInputBlur: () => void;
 }
 
-
 export default function FileExplorer({
-  files,
+  files, // <-- Now it is correctly received
   activeFile,
   onSelectFile,
   onFileDelete,
@@ -36,7 +36,6 @@ export default function FileExplorer({
   onInputBlur
 }: FileExplorerProps) {
 
-  // ... (The handleDeleteClick function remains the same)
   const handleDeleteClick = (e: MouseEvent, fileName: string) => {
     e.stopPropagation();
     if (window.confirm(`Are you sure you want to permanently delete "${fileName}"?`)) {
@@ -44,11 +43,9 @@ export default function FileExplorer({
     }
   };
 
-
   return (
-    // ---- THE ONLY CHANGE IS ON THIS LINE ----
-    // Removed 'w-64' and added 'h-full'
-    <div className="bg-gray-800 text-white p-4 h-full flex flex-col">
+    // Make it fill the panel's height and scroll if needed
+    <div className="bg-gray-800 text-white p-4 flex flex-col h-full overflow-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-bold">Files</h2>
         <button
